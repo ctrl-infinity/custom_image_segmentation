@@ -2,6 +2,9 @@ import cv2
 from skimage.metrics import structural_similarity
 import numpy as np
 from pathlib import Path
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class Block:
@@ -33,7 +36,7 @@ class Block:
         return f"{self.name}"
 
 
-def split_image(path, block_size, gray=False, draw_img=False):
+def split_image_into_blocks(path, block_size, gray=False, draw_lines=False):
     """
     Takes an image as input and then splits the image into various blocks
     of the given block_size.
@@ -46,7 +49,7 @@ def split_image(path, block_size, gray=False, draw_img=False):
     :param gray: Boolean, optional
                 To convert the image to grayscale before splitting it into
                 blocks.
-    :param draw_img: Boolean, optional
+    :param draw_lines: Boolean, optional
                 To draw lines on the image in order to represent the blocks.
     :return: img_blocks, img: numpy array
                 Image blocks consists of the blocks row-wise.
@@ -54,13 +57,15 @@ def split_image(path, block_size, gray=False, draw_img=False):
     """
     # Reading the image
     img = cv2.imread(path)
-    height, width = img.shape[0:2]
+    height, width = img.shape[0:2] # Not considering the third dimension (RGB) here
+    
+    # TODO: Mention the unit of block height and width, and the range of values that they can be.
     block_height, block_width = block_size
 
     # Checking if the block dimensions are valid.
     if width % block_width != 0 and height % block_height != 0:
-        print(f"Original shape: {img.shape}")
-        print(f"Input image cannot be divided in {block_height} X {block_width} blocks")
+        logging.info(f"Dimensions of the image: {img.shape}")
+        logging.info(f"Input image cannot be divided in {block_height} X {block_width} blocks")
         return -1, -1
 
     blocks = []
@@ -85,7 +90,7 @@ def split_image(path, block_size, gray=False, draw_img=False):
             img_block = Block(name=f"{i}-{j}", data=img[y1: y2, x1: x2])
             row.append(img_block)
 
-            if draw_img:
+            if draw_lines:
                 img = cv2.rectangle(img, (x1, y1), (x2, y2), color=(35, 255, 100), thickness=2)
                 img = cv2.putText(img, text=f"{i}{j}",
                                   org=((x1+x2)//2, (y1+y2)//2),
@@ -121,7 +126,7 @@ def blocks_similarity(block1, block2):
 
 def main():
     path = Path.cwd()/"dummy.jpg"
-    blocks, img = split_image(str(path), block_size=(100, 100), gray=False, draw_img=True)
+    blocks, img = split_image_into_blocks(str(path), block_size=(100, 100), gray=False, draw_lines=True)
     print(blocks[0][0].shape)
 
 
