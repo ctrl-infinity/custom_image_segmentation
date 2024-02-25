@@ -59,7 +59,38 @@ def read_image(image_path, show_image=False):
         print(f"Check your image file present in {image_path}. It gave the following error \n\t{e}")
 
 
-def split_image_into_blocks(image, block_dim, draw_grid=True, gray=False):
+def split_image_into_blocks(image, block_dim, draw_grid=True, to_gray=False):
+    """
+    Splits an image into the blocks of the given block dimensions. 
+    If the `draw_grid` parameter is set to True, the method return an image with the gridlines drawn.
+    If the `to_gray` parameter is set to True, the method would change the image file to grascale.
+
+    Args:
+        image (str): The image object for which the blocks need to be created.
+        block_dim (tuple): The (height, width) of a block. The dimensions need to be proper factors of the dimensions of the image.
+        draw_grid (bool, optional): A boolean indicating whether to get the image with a grid of blocks drawn over it. Defaults to True.
+        to_gray (bool, optional): A boolean indicating whether to convert the image to grayscale. Defaults to False.
+
+    Returns:
+        Open CV Image Object: A CV object represnting the image.
+        numpy.ndarray: A numpy array representing the blocks of the image row and col wise.
+
+    Raises:
+        Exception: An exception is raised if the image file is not found or if there is an error loading the image.
+
+    Example:
+        import cv2
+        import logging
+
+        # Set up logging
+        logging.basicConfig(level=logging.INFO)
+
+        # Read an image from file
+        img = read_image("path/to/image.jpg") # Image size (800, 600, 3) for example
+
+        # Split the image into blocks
+        image_blocks, img = split_image_into_blocks(img, block_dim=(50, 50))
+    """
     height, width = image.shape[0:2]
     block_height, block_width = block_dim
     
@@ -69,8 +100,8 @@ def split_image_into_blocks(image, block_dim, draw_grid=True, gray=False):
         logging.info(f"Input image cannot be divided in {block_height} X {block_width} blocks")
         return -1, -1
     
-    # Conver the image to grayscale if required
-    if gray:
+    # Conver the image to to_grayscale if required
+    if to_gray:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     
     # Number of rows and cols after splitting the image.
