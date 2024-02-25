@@ -1,4 +1,6 @@
 from skimage.metrics import structural_similarity
+import logging
+
 
 def get_ssim_similarity(block1, block2):
     """
@@ -22,35 +24,28 @@ def get_ssim_similarity(block1, block2):
     sim, diff = structural_similarity(block1, block2, full=True, multichannel=mul, channel_axis=channel_axis)
     return round(sim, 4)
 
-def get_block_neighbours(row, col, blocks):
-    h, w = blocks.shape[0], blocks.shape[1]
-    
-    # Check if the block is present
-    if not all([0 <= row < h, 0 <= col < w]):
-        print("Invalid coordinates!")
-        return -1
-
-    # Getting the data(numpy array) of the block whose neighbours have to be found
-    centre = blocks[row][col].get_block_data()
-    
-    pos_index = [-1, 0, 1]
-    
-    # Calculate all possible index of the neighbouring blocks 
-    all_neighbours_index = [(row-i, col-j) for i in pos_index for j in pos_index if (i, j) != (0, 0)]
-    
-    # Filter out all the valid indices
-    valid_neighbours_index = [(i, j) for i, j in all_neighbours_index if all([0 <= i < h, 0 <= j < w])]
-    
-    return valid_neighbours_index
-    
-    
-    
-def similarity_with_neighbours(row, col, blocks, neighbours_index, how='ssim'):
+   
+def get_similarity_with_neighbours(row, col, blocks, neighbours_index, how='ssim'):
     target_block = blocks[row][col].get_block_data() 
     
     if how == "ssim":
-        sim = {"center": f"Block_{row}_{col}"}
+        sim = {"center": f"{row}-{col}"}
         for i, j in neighbours_index:
-            sim[f"Block_{i}_{j}"] = get_ssim_similarity(target_block, blocks[i][j].get_block_data())
+            sim[f"{i}-{j}"] = get_ssim_similarity(target_block, blocks[i][j].get_block_data())
 
     return sim
+
+
+def display_similarities(sim_dict):
+    """For printing the sorted list of similarities with its neighbours for a SINGLE block.
+
+    Args:
+        sim_dict (dict): Returned from get_similarity_with_neighbours(), 
+                        contains the centre block and its neighbours along 
+                        with their similarity score.
+    """
+    target = sim_dict['center']
+    logging.info(f"Target block index {target}")
+    scores = {block: sim_dict[block] for block in sim_dict if block != "center"}
+    for k, v in sorted(scores.items(), key=lambda x : x[1], reverse=True):
+        print(f"{k}: {v}")

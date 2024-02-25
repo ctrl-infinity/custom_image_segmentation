@@ -1,6 +1,6 @@
 import cv2
-
-from ImageBlocks import blocks_similarity
+from image_blocks import get_block_neighbours
+from similarity import get_ssim_similarity, get_similarity_with_neighbours
 from random import choice
 from PIL.ImageColor import getcolor
 import numpy as np
@@ -22,7 +22,6 @@ def change_shade(color, change_by, weight=0.15):
     for c in color:
         # Changing the components
         c = c * (1 + (change_by * weight))
-
         # Make sure that the new component remains below 255
         if c > 255:
             c = 255
@@ -32,20 +31,21 @@ def change_shade(color, change_by, weight=0.15):
     return tuple(new_col)
 
 
-def random_color():
+def random_color(mode='rgb'):
     """
     Creates a random color using hexadecimal digits. And then converts it into RGB code.
     :return:
     """
-    s = [*range(10), *list("ABCDEF")]
-    # Generate color in hex code.
-    col = "#" + "".join(str(choice(s)) for _ in range(6))
+    if mode == 'hex':    
+        hex_digits = [*range(10), *list("ABCDEF")]
+        # Generate color in hex code.
+        col = "#" + "".join(str(choice(hex_digits)) for _ in range(6))
+
+    elif mode == 'rgb':
+        digits = range(256)
+        col = (choice(digits), choice(digits), choice(digits))
 
     return col
-    # Convert to BGR
-    # bgr_color = getcolor(col, "RGB")[::-1]
-    #
-    # return bgr_color
 
 
 def image_segmentation(blocks, color_shading=False, thresh=0.9):
@@ -64,11 +64,13 @@ def image_segmentation(blocks, color_shading=False, thresh=0.9):
         for j in range(blocks.shape[1]):
             # Assign a color if the block in question has no color.
             if blocks[i][j].color is None:
-                blocks[i][j].change_color(random_color())
+                blocks[i][j].set_new_color(random_color())
 
             # Calculate similarity with neighbours
-            neighbours = similarity_with_neighbours(i, j, blocks)
+            neighbours = get_block_neighbours(i, j, blocks)
+            neighbours = get_similarity_with_neighbours(i, j, blocks, neighbours)
 
+            del neighbours['center']
             param = 0.7 if color_shading else thresh
 
             for n in neighbours:
@@ -77,49 +79,49 @@ def image_segmentation(blocks, color_shading=False, thresh=0.9):
                 if (neighbours[n] >= param) and (blocks[x][y].color is None):
                     change = int(neighbours[n] * 10) - int(10 * thresh) if color_shading else 0
                     new_col = change_shade(blocks[i][j].color, change_by=change)
-                    blocks[x][y].change_color(new_col)
+                    blocks[x][y].set_new_color(new_col)
                     blocks[x][y].prev_sim = neighbours[n]
 
                 elif (neighbours[n] >= thresh) and (blocks[x][y].color is not None):
                     if neighbours[n] >= blocks[x][y].prev_sim:
                         change = int(neighbours[n] * 10) - int(10 * thresh) if color_shading else 0
                         new_col = change_shade(blocks[i][j].color, change_by=change)
-                        blocks[x][y].change_color(new_col)
+                        blocks[x][y].set_new_color(new_col)
 
     return blocks
 
 
-def similarity_with_neighbours(row, col, blocks):
-    """
-    Calculates similarity of a block ij with its neighbors.
-    :param row: int
-            Row number. Indexing starting from 0.
-    :param col: int
-            Column number. Indexing starting from 0.
-    :param blocks: Set of all the blocks
-    :return: dict
-            keys: neighbor names, value: similarity score
-    """
-    # Check for valid row and col values.
-    h, w = blocks.shape[0], blocks.shape[1]
-    if not all([0 <= row < h, 0 <= col < w]):
-        print("Invalid coordinates!")
-        return -1
+# def get_similarity_with_neighbours(row, col, blocks):
+#     """
+#     Calculates similarity of a block ij with its neighbors.
+#     :param row: int
+#             Row number. Indexing starting from 0.
+#     :param col: int
+#             Column number. Indexing starting from 0.
+#     :param blocks: Set of all the blocks
+#     :return: dict
+#             keys: neighbor names, value: similarity score
+#     """
+#     # Check for valid row and col values.
+#     h, w = blocks.shape[0], blocks.shape[1]
+#     if not all([0 <= row < h, 0 <= col < w]):
+#         print("Invalid coordinates!")
+#         return -1
 
-    # Identify the centre point.
-    centre = blocks[row][col]
-    pos_index = [-1, 0, 1]
+#     # Identify the centre point.
+#     centre = blocks[row][col]
+#     pos_index = [-1, 0, 1]
 
-    # Calculate the indices of its neighbors.
-    neighbours_index = [(row-i, col-j) for i in pos_index for j in pos_index if (i, j) != (0, 0)]
+#     # Calculate the indices of its neighbors.
+#     neighbours_index = [(row-i, col-j) for i in pos_index for j in pos_index if (i, j) != (0, 0)]
 
-    # If the neighbor index is present in our array of blocks
-    bool_index = [(i, j) for i, j in neighbours_index if all([0 <= i < h, 0 <= j < w])]
-    sim = {}
-    for i, j in bool_index:
-        sim[f"{i}-{j}"] = blocks_similarity(centre.data, blocks[i][j].data)
+#     # If the neighbor index is present in our array of blocks
+#     bool_index = [(i, j) for i, j in neighbours_index if all([0 <= i < h, 0 <= j < w])]
+#     sim = {}
+#     for i, j in bool_index:
+#         sim[f"{i}-{j}"] = get_ssim_similarity(centre.data, blocks[i][j].data)
 
-    return sim
+#     return sim
 
 
 def form_images(blocks, change_color=False):
