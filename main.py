@@ -1,13 +1,28 @@
 """Entrypoint file for the project from which the tool can be used."""
-from ImageBlocks import split_image_into_blocks, Block
+from image_blocks import Block
 from pathlib import Path
 import logging
 import cv2
 import numpy as np
+from similarity import similarity_with_neighbours, get_block_neighbours
 
 logging.basicConfig(level=logging.DEBUG)
 
+def display_similarities(sim_dict):
+    """For printing the sorted list of similarities with its neighbours for a SINGLE block.
 
+    Args:
+        sim_dict (dict): Returned from similarity_with_neighbours(), 
+                        contains the centre block and its neighbours along 
+                        with their similarity score.
+    """
+    target = sim_dict['center']
+    logging.info(f"Target block index {target}")
+    scores = {block: sim_dict[block] for block in sim_dict if block != "center"}
+    for k, v in sorted(scores.items(), key=lambda x : x[1], reverse=True):
+        print(f"{k}: {v}")
+    
+        
 def display_image(img):
     cv2.imshow("Input Image", img)
     cv2.waitKey(0)
@@ -141,7 +156,21 @@ def main(image_path):
     img = read_image(image_path, show_image=False)
     
     # Split the image into blocks
-    image_blocks, img = split_image_into_blocks(img, block_dim=(50, 50))
+    image_blocks, img = split_image_into_blocks(img, block_dim=(100, 100))
+    
+    # Calculate 
+    for i in range(image_blocks.shape[0]):
+        for j in range(image_blocks.shape[1]):
+            neighbours = get_block_neighbours(i, j, image_blocks)
+            # print(f" Neigbours for ({i}, {j}) are: {neighbours}")
+    
+    
+    # Calculate similarity with the neighbours
+    neighbours_0_0 = get_block_neighbours(4, 1, image_blocks)
+    s = similarity_with_neighbours(4, 1, image_blocks, neighbours_0_0)
+    
+    # 
+    display_similarities(s)
     
     # Display the image
     display_image(img)
